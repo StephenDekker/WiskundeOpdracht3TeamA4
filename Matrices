@@ -1,0 +1,101 @@
+# Imports
+# import wis_2_2_utilities as util
+# import wis_2_2_systems as systems
+import wis_2_2_utilities_nochrono as util
+import wis_2_2_systems_nochrono as systems
+import numpy as np
+import control as ct
+import matplotlib.pyplot as plt
+from scipy.signal import place_poles
+
+# Definities
+dx = 1e-3
+timestep = 1e-6
+state0 = [0, 0, 0, 0]
+u0 = dx
+cart_pos = []
+cart_vel = []
+pen1_angle = []
+pen1_vel = []
+tijd = np.arange(0, 1e-4, timestep)
+timestep2 = 2e-3  # Simulatietijdstap
+simulation_time2 = 15  # Simulatieduur in seconden
+
+class pp_controller():
+    def __init__(self, target=0):
+        self.matrix_gain = np.array([[0, 0, 0, 0]])
+
+    def feedBack(self, observe):
+        u = u0
+        return u
+
+
+class controller():
+    def __init__(self, target=0):
+        self.matrix_gain = np.array([0, 0, 0, 0])
+
+    def feedBack(self, observe):
+        u = -self.matrix_gain @ observe
+        return u
+
+
+def main():
+    model = systems.cart_inverted_pendulum(state0=state0, u0=u0)
+    control = pp_controller()
+    simulation = util.simulation(model=model, timestep=timestep)
+    simulation.setCost()
+    simulation.max_duration = 1e-4  # seconde
+    simulation.GIF_toggle = False  # set to false to avoid frame and GIF creation
+
+    while simulation.vis.Run():
+        if simulation.time < simulation.max_duration:
+            simulation.step()
+            u = control.feedBack(simulation.observe())
+            simulation.control(0)
+            simulation.log()
+            simulation.refreshTime()
+
+            cart_pos_ = model.getState()[0]
+            cart_vel_ = model.getState()[1]
+            pen1_angle_ = model.getState()[2]
+            pen1_vel_ = model.getState()[3]
+
+            pen1_angle.append(pen1_angle_)
+            pen1_vel.append(pen1_vel_)
+            cart_pos.append(cart_pos_)
+            cart_vel.append(cart_vel_)
+
+        else:
+            print('Ending visualisation...')
+            simulation.vis.GetDevice().closeDevice()
+    simulation.writeData()
+    print('simulation cost:', simulation.cost_input)
+
+    meting = [cart_pos[0], cart_vel[0], pen1_angle[0], pen1_vel[0]]
+    delta_vector = []
+    for i in range(0, len(meting)):
+        delta = meting[i] - state0[i]
+        delta2 = delta / (dx * timestep)
+        delta_vector.append(delta2)
+
+    print(delta_vector)
+
+
+if __name__ == "__main__":
+    main()
+
+fig, (ax1, ax2) = plt.subplots(2)
+
+ax1.set_title("Hoek")
+ax1.plot(tijd, cart_pos, label="Cart Position")
+ax1.plot(tijd, pen1_angle, label="Pendulum Hoek")
+# ax1.plot(tijd,pen2_angle, label="Cart Position")
+ax1.legend()
+
+ax2.set_title("Snelheid")
+ax2.plot(tijd, cart_vel, label="Cart Speed")
+ax2.plot(tijd, pen1_vel, label="Pendulum Hoek")
+# ax1.plot(tijd,pen2_speed, label="Cart Position")
+ax2.legend()
+
+plt.show()
