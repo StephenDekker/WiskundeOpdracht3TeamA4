@@ -1,0 +1,44 @@
+import wis_2_2_utilities as util
+import wis_2_2_systems as systems
+#import random
+import numpy as np
+
+#set timestep
+timestep = 2e-3
+
+
+
+
+class controller():
+    def __init__(self, target=0):
+        self.matrix_gain=np.array([[-22.36067977 , -33.45688344 ,-337.31937571 , -67.87123503]])
+    def feedBack(self, observe):
+        u= -self.matrix_gain @ observe
+        return u
+  
+
+def main():
+  model=systems.cart_inverted_pendulum()
+  control = controller()
+  simulation = util.simulation(model=model,timestep=timestep)
+  simulation.setCost()
+  simulation.max_duration = 8 #seconde
+  simulation.GIF_toggle = True  #set to false to avoid frame and GIF creation
+
+  while simulation.vis.Run():
+      if simulation.time<simulation.max_duration:
+        simulation.step()
+        u = control.feedBack(simulation.observe())
+        simulation.control(u)
+        simulation.log()
+        simulation.refreshTime()
+        print("The cost is: ", simulation.cost_input)
+      else:
+        print('Ending visualisation...')
+        simulation.vis.GetDevice().closeDevice()
+      
+        
+  simulation.writeData()
+  
+if __name__ == '__main__':
+    main()
